@@ -7,7 +7,7 @@ package clipboard_test
 import (
 	"testing"
 
-	. "github.com/atotto/clipboard"
+	. "github.com/gopasspw/clipboard"
 )
 
 func TestCopyAndPaste(t *testing.T) {
@@ -60,14 +60,14 @@ func TestMultiCopyAndPaste(t *testing.T) {
 }
 
 func BenchmarkReadAll(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		ReadAll()
+	for b.Loop() {
+		ReadAll() //nolint:errcheck
 	}
 }
 
 func BenchmarkWriteAll(b *testing.B) {
 	text := "いろはにほへと"
-	for i := 0; i < b.N; i++ {
-		WriteAll(text)
+	for b.Loop() {
+		WriteAll(text) //nolint:errcheck
 	}
 }

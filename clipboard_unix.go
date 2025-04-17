@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build freebsd || linux || netbsd || openbsd || solaris || dragonfly
 // +build freebsd linux netbsd openbsd solaris dragonfly
 
 package clipboard
@@ -27,8 +28,9 @@ var (
 	Primary bool
 	trimDos bool
 
-	pasteCmdArgs []string
-	copyCmdArgs  []string
+	pasteCmdArgs   []string
+	copyCmdArgs    []string
+	copySecretArgs []string
 
 	xselPasteArgs = []string{xsel, "--output", "--clipboard"}
 	xselCopyArgs  = []string{xsel, "--input", "--clipboard"}
@@ -52,6 +54,7 @@ func init() {
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
 		pasteCmdArgs = wlpasteArgs
 		copyCmdArgs = wlcopyArgs
+		copySecretArgs = append(wlcopyArgs, "-o", "--type", "x-kde-passwordManagerHint/secret")
 
 		if _, err := exec.LookPath(wlcopy); err == nil {
 			if _, err := exec.LookPath(wlpaste); err == nil {
@@ -110,6 +113,16 @@ func getCopyCommand() *exec.Cmd {
 	return exec.Command(copyCmdArgs[0], copyCmdArgs[1:]...)
 }
 
+func getCopySecretCommand() *exec.Cmd {
+	if len(copySecretArgs) < 1 {
+		copySecretArgs = copyCmdArgs
+	}
+	if Primary {
+		copySecretArgs = copySecretArgs[:1]
+	}
+	return exec.Command(copySecretArgs[0], copySecretArgs[1:]...)
+}
+
 func readAll() (string, error) {
 	if Unsupported {
 		return "", missingCommands
@@ -126,11 +139,16 @@ func readAll() (string, error) {
 	return result, nil
 }
 
-func writeAll(text string) error {
+func writeAll(text string, secret bool) error {
 	if Unsupported {
 		return missingCommands
 	}
-	copyCmd := getCopyCommand()
+	var copyCmd *exec.Cmd
+	if secret {
+		copyCmd = getCopySecretCommand()
+	} else {
+		copyCmd = getCopyCommand()
+	}
 	in, err := copyCmd.StdinPipe()
 	if err != nil {
 		return err

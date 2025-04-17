@@ -1,1 +1,3 @@
-module github.com/atotto/clipboard
+module github.com/gopasspw/clipboard
+
+go 1.24.1

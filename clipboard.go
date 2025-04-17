@@ -5,14 +5,19 @@
 // Package clipboard read/write on clipboard
 package clipboard
 
-// ReadAll read string from clipboard
+// ReadAll read string from clipboard.
 func ReadAll() (string, error) {
 	return readAll()
 }
 
-// WriteAll write string to clipboard
+// WriteAll write string to clipboard.
 func WriteAll(text string) error {
-	return writeAll(text)
+	return writeAll(text, false)
+}
+
+// WritePassword writes a password to the clipboard.
+func WritePassword(text string) error {
+	return writeAll(text, true)
 }
 
 // Unsupported might be set true during clipboard init, to help callers decide

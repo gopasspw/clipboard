@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build darwin
 // +build darwin
 
 package clipboard
@@ -29,10 +30,11 @@ func readAll() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(out), nil
 }
 
-func writeAll(text string) error {
+func writeAll(text string, _ bool) error {
 	copyCmd := getCopyCommand()
 	in, err := copyCmd.StdinPipe()
 	if err != nil {
@@ -48,5 +50,6 @@ func writeAll(text string) error {
 	if err := in.Close(); err != nil {
 		return err
 	}
+
 	return copyCmd.Wait()
 }
