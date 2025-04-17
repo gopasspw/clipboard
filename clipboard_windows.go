@@ -77,7 +77,7 @@ func readAll() (string, error) {
 		return "", err
 	}
 
-	text := syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(l))[:])
+	text := syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(l))[:]) //nolint:unsafeptr
 
 	r, _, err := globalUnlock.Call(h)
 	if r == 0 {
