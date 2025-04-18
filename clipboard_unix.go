@@ -8,7 +8,9 @@
 package clipboard
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 )
@@ -127,10 +129,15 @@ func readAll() ([]byte, error) {
 	if Unsupported {
 		return nil, missingCommands
 	}
+
 	pasteCmd := getPasteCommand()
+	// capture errors
+	eOut := &bytes.Buffer{}
+	pasteCmd.Stderr = eOut
+
 	out, err := pasteCmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run command: %w. Output: %s", err, eOut.String())
 	}
 	result := out
 	if trimDOS && len(result) > 1 {
@@ -149,19 +156,25 @@ func writeAll(text []byte, secret bool) error {
 	} else {
 		copyCmd = getCopyCommand()
 	}
+	// capture errors
+	eOut := &bytes.Buffer{}
+	copyCmd.Stderr = eOut
+
 	in, err := copyCmd.StdinPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get stdin pipe: %w", err)
 	}
-
 	if err := copyCmd.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to start command: %w", err)
 	}
 	if _, err := in.Write(text); err != nil {
-		return err
+		return fmt.Errorf("failed to write to stdin: %w", err)
 	}
 	if err := in.Close(); err != nil {
-		return err
+		return fmt.Errorf("failed to close stdin: %w", err)
 	}
-	return copyCmd.Wait()
+	if err := copyCmd.Wait(); err != nil {
+		return fmt.Errorf("failed to wait for command: %w. Output: %s", err, eOut.String())
+	}
+	return nil
 }
