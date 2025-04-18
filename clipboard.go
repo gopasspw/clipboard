@@ -19,7 +19,7 @@ func ReadAllString() (string, error) {
 	return string(text), nil
 }
 
-// WriteAll write string to clipboard.
+// WriteAll writes a string to the clipboard.
 func WriteAll(text []byte) error {
 	return writeAll(text, false)
 }

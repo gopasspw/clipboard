@@ -7,8 +7,8 @@ import (
 )
 
 func Example() {
-	clipboard.WriteAllString("日本語") //nolint:errcheck
-	text, _ := clipboard.ReadAll()  //nolint:errcheck
+	clipboard.WriteAllString("日本語")      //nolint:errcheck
+	text, _ := clipboard.ReadAllString() //nolint:errcheck
 	fmt.Println(text)
 
 	// Output:
