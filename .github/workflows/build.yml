@@ -51,7 +51,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Ubuntu Dependencies
-      run: sudo apt-get install --yes wl-clipboard xclip xsel
+      run: sudo apt-get install --yes wl-clipboard xclip xsel xvfb
 
     -
       name: Debug
@@ -62,10 +62,11 @@ jobs:
         echo ${GITHUB_WORKSPACE}
         echo ${GOPATH}
         echo ${GOROOT}
-        env  
+        echo ${DISPLAY}
+        env
 
     - name: Build and Unit Test
-      run: go test ./...
+      run: xvfb-run go test ./...
 
   windows:
     runs-on: windows-latest
