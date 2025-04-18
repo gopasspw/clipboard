@@ -42,3 +42,7 @@ func writeAll(_ context.Context, text []byte, _ bool) error {
 
 	return nil
 }
+
+func unsupported() bool {
+	return false
+}
