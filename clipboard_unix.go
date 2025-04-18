@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build freebsd || linux || netbsd || openbsd || solaris || dragonfly
-// +build freebsd linux netbsd openbsd solaris dragonfly
+//go:build !windows && !darwin && !plan9
+// +build !windows,!darwin,!plan9
 
 package clipboard
 
