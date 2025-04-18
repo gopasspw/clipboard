@@ -8,6 +8,7 @@
 package clipboard
 
 import (
+	"context"
 	"runtime"
 	"syscall"
 	"time"
@@ -54,7 +55,7 @@ func waitOpenClipboard() error {
 	return err
 }
 
-func readAll() ([]byte, error) {
+func readAll(_ context.Context) ([]byte, error) {
 	// LockOSThread ensure that the whole method will keep executing on the same thread from begin to end (it actually locks the goroutine thread attribution).
 	// Otherwise if the goroutine switch thread during execution (which is a common practice), the OpenClipboard and CloseClipboard will happen on two different threads, and it will result in a clipboard deadlock.
 	runtime.LockOSThread()
@@ -94,7 +95,7 @@ func readAll() ([]byte, error) {
 	return []byte(text), nil
 }
 
-func writeAll(text []byte, _ bool) error {
+func writeAll(_ context.Context, text []byte, _ bool) error {
 	// LockOSThread ensure that the whole method will keep executing on the same thread from begin to end (it actually locks the goroutine thread attribution).
 	// Otherwise if the goroutine switch thread during execution (which is a common practice), the OpenClipboard and CloseClipboard will happen on two different threads, and it will result in a clipboard deadlock.
 	runtime.LockOSThread()
@@ -111,7 +112,11 @@ func writeAll(text []byte, _ bool) error {
 		return err
 	}
 
-	data := syscall.StringToUTF16(string(text))
+	data, err := syscall.UTF16FromString(string(text))
+	if err != nil {
+		_, _, _ = closeClipboard.Call()
+		return err
+	}
 
 	// "If the hMem parameter identifies a memory object, the object must have
 	// been allocated using the function with the GMEM_MOVEABLE flag."

@@ -5,33 +5,36 @@
 // Package clipboard read/write on clipboard
 package clipboard
 
+import "context"
+
 // ReadAll reads from the clipboard.
-func ReadAll() ([]byte, error) {
-	return readAll()
+func ReadAll(ctx context.Context) ([]byte, error) {
+	return readAll(ctx)
 }
 
 // ReadAllString reads a string from the clipboard.
-func ReadAllString() (string, error) {
-	text, err := readAll()
+func ReadAllString(ctx context.Context) (string, error) {
+	text, err := readAll(ctx)
 	if err != nil {
 		return "", err
 	}
+
 	return string(text), nil
 }
 
 // WriteAll writes a string to the clipboard.
-func WriteAll(text []byte) error {
-	return writeAll(text, false)
+func WriteAll(ctx context.Context, text []byte) error {
+	return writeAll(ctx, text, false)
 }
 
 // WriteAllString writes a string to the clipboard.
-func WriteAllString(text string) error {
-	return writeAll([]byte(text), false)
+func WriteAllString(ctx context.Context, text string) error {
+	return writeAll(ctx, []byte(text), false)
 }
 
 // WritePassword writes a password to the clipboard.
-func WritePassword(text []byte) error {
-	return writeAll(text, true)
+func WritePassword(ctx context.Context, text []byte) error {
+	return writeAll(ctx, text, true)
 }
 
 // Unsupported might be set true during clipboard init, to help callers decide

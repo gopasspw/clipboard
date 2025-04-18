@@ -9,6 +9,7 @@ package clipboard
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -101,36 +102,12 @@ func init() {
 	Unsupported = true
 }
 
-func getPasteCommand() *exec.Cmd {
-	if Primary {
-		pasteCmdArgs = pasteCmdArgs[:1]
-	}
-	return exec.Command(pasteCmdArgs[0], pasteCmdArgs[1:]...)
-}
-
-func getCopyCommand() *exec.Cmd {
-	if Primary {
-		copyCmdArgs = copyCmdArgs[:1]
-	}
-	return exec.Command(copyCmdArgs[0], copyCmdArgs[1:]...)
-}
-
-func getCopySecretCommand() *exec.Cmd {
-	if len(copySecretArgs) < 1 {
-		copySecretArgs = copyCmdArgs
-	}
-	if Primary {
-		copySecretArgs = copySecretArgs[:1]
-	}
-	return exec.Command(copySecretArgs[0], copySecretArgs[1:]...)
-}
-
-func readAll() ([]byte, error) {
+func readAll(ctx context.Context) ([]byte, error) {
 	if Unsupported {
 		return nil, missingCommands
 	}
 
-	pasteCmd := getPasteCommand()
+	pasteCmd := exec.CommandContext(ctx, pasteCmdArgs[0], pasteCmdArgs[1:]...)
 	// capture errors
 	eOut := &bytes.Buffer{}
 	pasteCmd.Stderr = eOut
@@ -146,15 +123,13 @@ func readAll() ([]byte, error) {
 	return result, nil
 }
 
-func writeAll(text []byte, secret bool) error {
+func writeAll(ctx context.Context, text []byte, secret bool) error {
 	if Unsupported {
 		return missingCommands
 	}
-	var copyCmd *exec.Cmd
+	copyCmd := exec.CommandContext(ctx, copyCmdArgs[0], copyCmdArgs[1:]...)
 	if secret {
-		copyCmd = getCopySecretCommand()
-	} else {
-		copyCmd = getCopyCommand()
+		copyCmd = exec.CommandContext(ctx, copySecretArgs[0], copySecretArgs[1:]...)
 	}
 	// capture errors
 	eOut := &bytes.Buffer{}

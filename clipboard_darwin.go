@@ -20,16 +20,8 @@ var (
 	copyCmdArgs  = "pbcopy"
 )
 
-func getPasteCommand() *exec.Cmd {
-	return exec.Command(pasteCmdArgs)
-}
-
-func getCopyCommand() *exec.Cmd {
-	return exec.Command(copyCmdArgs)
-}
-
-func readAll() ([]byte, error) {
-	pasteCmd := getPasteCommand()
+func readAll(ctx context.Context) ([]byte, error) {
+	pasteCmd := exec.CommandContext(ctx, pasteCmdArgs)
 	out, err := pasteCmd.Output()
 	if err != nil {
 		return nil, err
@@ -38,18 +30,17 @@ func readAll() ([]byte, error) {
 	return out, nil
 }
 
-func writeAll(text []byte, secret bool) error {
+func writeAll(ctx context.Context, text []byte, secret bool) error {
 	if secret {
 		// Use osascript to set the clipboard contents, if that fails
 		// just use pbcopy as a fallback.
-		err := copyViaOsascript(context.TODO(), string(text))
-		if err == nil {
+		if err := copyViaOsascript(ctx, string(text)); err == nil {
 			return nil
 		}
 	}
 
 	// If osascript fails or we're not dealing with a secret, use pbcopy.
-	copyCmd := getCopyCommand()
+	copyCmd := exec.CommandContext(ctx, copyCmdArgs)
 	in, err := copyCmd.StdinPipe()
 	if err != nil {
 		return err
@@ -58,7 +49,7 @@ func writeAll(text []byte, secret bool) error {
 	if err := copyCmd.Start(); err != nil {
 		return err
 	}
-	if _, err := in.Write([]byte(text)); err != nil {
+	if _, err := in.Write(text); err != nil {
 		return err
 	}
 	if err := in.Close(); err != nil {
