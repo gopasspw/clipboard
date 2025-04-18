@@ -109,3 +109,7 @@ func copyViaOsascript(ctx context.Context, password string) error {
 
 	return nil
 }
+
+func unsupported() bool {
+	return false
+}

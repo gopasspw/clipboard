@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 )
 
 const (
@@ -28,12 +29,8 @@ const (
 )
 
 var (
-	Primary bool
-	trimDOS bool
-
-	pasteCmdArgs   []string
-	copyCmdArgs    []string
-	copySecretArgs []string
+	wrap *wrapper
+	once sync.Once
 
 	xselPasteArgs = []string{xsel, "--output", "--clipboard"}
 	xselCopyArgs  = []string{xsel, "--input", "--clipboard"}
@@ -50,64 +47,105 @@ var (
 	termuxPasteArgs = []string{termuxClipboardGet}
 	termuxCopyArgs  = []string{termuxClipboardSet}
 
-	missingCommands = errors.New("No clipboard utilities available. Please install xsel, xclip, wl-clipboard or Termux:API add-on for termux-clipboard-get/set.")
+	errMissingCommands = errors.New("No clipboard utilities available. Please install xsel, xclip, wl-clipboard or Termux:API add-on for termux-clipboard-get/set.")
 )
 
-func init() {
+type wrapper struct {
+	trimDOS bool
+
+	pasteCmdArgs   []string
+	copyCmdArgs    []string
+	copySecretArgs []string
+
+	// supported is true if the clipboard is supported
+	supported bool
+}
+
+func (w *wrapper) unsupported() bool {
+	return !w.supported
+}
+
+func newWrapper() *wrapper {
+	w := &wrapper{}
+
+	// Wayland
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
-		pasteCmdArgs = wlpasteArgs
-		copyCmdArgs = wlcopyArgs
-		copySecretArgs = append(wlcopyArgs, "-o", "--type", "x-kde-passwordManagerHint/secret")
+		w.pasteCmdArgs = wlpasteArgs
+		w.copyCmdArgs = wlcopyArgs
+		w.copySecretArgs = append(wlcopyArgs, "-o", "--type", "x-kde-passwordManagerHint/secret")
 
 		if _, err := exec.LookPath(wlcopy); err == nil {
 			if _, err := exec.LookPath(wlpaste); err == nil {
-				return
+				w.supported = true
+
+				return w
 			}
 		}
 	}
 
-	pasteCmdArgs = xclipPasteArgs
-	copyCmdArgs = xclipCopyArgs
-
+	// X11 with xclip
 	if _, err := exec.LookPath(xclip); err == nil {
-		return
+		w.pasteCmdArgs = xclipPasteArgs
+		w.copyCmdArgs = xclipCopyArgs
+		w.supported = true
+
+		return w
 	}
 
-	pasteCmdArgs = xselPasteArgs
-	copyCmdArgs = xselCopyArgs
-
+	// X11 with xsel
 	if _, err := exec.LookPath(xsel); err == nil {
-		return
+		w.pasteCmdArgs = xselPasteArgs
+		w.copyCmdArgs = xselCopyArgs
+		w.supported = true
+
+		return w
 	}
 
-	pasteCmdArgs = termuxPasteArgs
-	copyCmdArgs = termuxCopyArgs
-
+	// Termux
 	if _, err := exec.LookPath(termuxClipboardSet); err == nil {
 		if _, err := exec.LookPath(termuxClipboardGet); err == nil {
-			return
+			w.pasteCmdArgs = termuxPasteArgs
+			w.copyCmdArgs = termuxCopyArgs
+			w.supported = true
+
+			return w
 		}
 	}
 
-	pasteCmdArgs = powershellExePasteArgs
-	copyCmdArgs = clipExeCopyArgs
-	trimDOS = true
-
+	// Powershell
 	if _, err := exec.LookPath(clipExe); err == nil {
 		if _, err := exec.LookPath(powershellExe); err == nil {
-			return
+			w.pasteCmdArgs = powershellExePasteArgs
+			w.copyCmdArgs = clipExeCopyArgs
+			w.trimDOS = true
+			w.supported = true
+
+			return w
 		}
 	}
 
-	Unsupported = true
+	// Unsupported
+	return w
+}
+
+func getWrapper() *wrapper {
+	once.Do(func() {
+		wrap = newWrapper()
+	})
+
+	return wrap
+}
+
+func init() {
 }
 
 func readAll(ctx context.Context) ([]byte, error) {
-	if Unsupported {
-		return nil, missingCommands
+	w := getWrapper()
+	if w.unsupported() {
+		return nil, errMissingCommands
 	}
 
-	pasteCmd := exec.CommandContext(ctx, pasteCmdArgs[0], pasteCmdArgs[1:]...)
+	pasteCmd := exec.CommandContext(ctx, w.pasteCmdArgs[0], w.pasteCmdArgs[1:]...)
 	// capture errors
 	eOut := &bytes.Buffer{}
 	pasteCmd.Stderr = eOut
@@ -117,19 +155,21 @@ func readAll(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("failed to run command: %w. Output: %s", err, eOut.String())
 	}
 	result := out
-	if trimDOS && len(result) > 1 {
+	if w.trimDOS && len(result) > 1 {
 		result = result[:len(result)-2]
 	}
 	return result, nil
 }
 
 func writeAll(ctx context.Context, text []byte, secret bool) error {
-	if Unsupported {
-		return missingCommands
+	w := getWrapper()
+	if w.unsupported() {
+		return errMissingCommands
 	}
-	copyCmd := exec.CommandContext(ctx, copyCmdArgs[0], copyCmdArgs[1:]...)
+
+	copyCmd := exec.CommandContext(ctx, w.copyCmdArgs[0], w.copyCmdArgs[1:]...)
 	if secret {
-		copyCmd = exec.CommandContext(ctx, copySecretArgs[0], copySecretArgs[1:]...)
+		copyCmd = exec.CommandContext(ctx, w.copySecretArgs[0], w.copySecretArgs[1:]...)
 	}
 	// capture errors
 	eOut := &bytes.Buffer{}
@@ -152,4 +192,10 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 		return fmt.Errorf("failed to wait for command: %w. Output: %s", err, eOut.String())
 	}
 	return nil
+}
+
+func unsupported() bool {
+	w := getWrapper()
+
+	return w.unsupported()
 }

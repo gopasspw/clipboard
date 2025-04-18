@@ -37,6 +37,7 @@ func WritePassword(ctx context.Context, text []byte) error {
 	return writeAll(ctx, text, true)
 }
 
-// Unsupported might be set true during clipboard init, to help callers decide
-// whether or not to offer clipboard options.
-var Unsupported bool
+// IsUnsupported returns true if the current platform is not supported.
+func IsUnsupported() bool {
+	return unsupported()
+}
