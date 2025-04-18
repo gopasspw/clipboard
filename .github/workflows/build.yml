@@ -22,7 +22,7 @@ jobs:
     - name: Harden Runner
       uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
       with:
-        egress-policy: block
+        egress-policy: audit
         allowed-endpoints: >
           github.com:443
           objects.githubusercontent.com:443
@@ -51,7 +51,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Ubuntu Dependencies
-      run: sudo apt-get install --yes wl-clipboard xclip xsel xvfb
+      run: sudo apt-get install --yes wl-clipboard xclip xsel xvfb x11-xserver-utils
 
     -
       name: Debug
@@ -66,7 +66,19 @@ jobs:
         env
 
     - name: Build and Unit Test
-      run: xvfb-run go test ./...
+      run: xvfb-run --auto-servernum go test ./...
+
+    - name: cleanup xvfb
+      run: |
+        xvfb_pids=`ps aux | grep tmp/xvfb-run | grep -v grep | awk '{print $2}'`
+        if [ "$xvfb_pids" != "" ]; then
+          echo "Killing the following xvfb processes: $xvfb_pids"
+          sudo kill $xvfb_pids
+        else
+          echo "No xvfb processes to kill"
+        fi
+      env:
+        CI: true
 
   windows:
     runs-on: windows-latest
