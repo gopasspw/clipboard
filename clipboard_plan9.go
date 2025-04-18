@@ -8,7 +8,7 @@
 package clipboard
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -19,7 +19,7 @@ func readAll() (string, error) {
 	}
 	defer f.Close()
 
-	str, err := ioutil.ReadAll(f)
+	str, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}
