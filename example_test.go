@@ -1,6 +1,3 @@
-//go:build interactive
-// +build interactive
-
 package clipboard_test
 
 import (
