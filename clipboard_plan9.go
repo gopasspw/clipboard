@@ -8,11 +8,12 @@
 package clipboard
 
 import (
+	"context"
 	"io"
 	"os"
 )
 
-func readAll() ([]byte, error) {
+func readAll(_ context.Context) ([]byte, error) {
 	f, err := os.Open("/dev/snarf")
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func readAll() ([]byte, error) {
 	return str, nil
 }
 
-func writeAll(text []byte, _ bool) error {
+func writeAll(_ context.Context, text []byte, _ bool) error {
 	f, err := os.OpenFile("/dev/snarf", os.O_WRONLY, 0o666)
 	if err != nil {
 		return err
