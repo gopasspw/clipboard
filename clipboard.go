@@ -7,6 +7,10 @@ package clipboard
 
 import "context"
 
+// ForceUnsupported is set to true to force the package to be unsupported.
+// This is useful for testing purposes.
+var ForceUnsupported bool
+
 // ReadAll reads from the clipboard.
 func ReadAll(ctx context.Context) ([]byte, error) {
 	return readAll(ctx)
@@ -39,5 +43,5 @@ func WritePassword(ctx context.Context, text []byte) error {
 
 // IsUnsupported returns true if the current platform is not supported.
 func IsUnsupported() bool {
-	return unsupported()
+	return unsupported() || ForceUnsupported
 }

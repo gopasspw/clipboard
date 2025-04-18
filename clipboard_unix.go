@@ -141,7 +141,7 @@ func init() {
 
 func readAll(ctx context.Context) ([]byte, error) {
 	w := getWrapper()
-	if w.unsupported() {
+	if w.unsupported() || ForceUnsupported {
 		return nil, errMissingCommands
 	}
 
@@ -163,7 +163,7 @@ func readAll(ctx context.Context) ([]byte, error) {
 
 func writeAll(ctx context.Context, text []byte, secret bool) error {
 	w := getWrapper()
-	if w.unsupported() {
+	if w.unsupported() || ForceUnsupported {
 		return errMissingCommands
 	}
 
