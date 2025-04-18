@@ -13,12 +13,12 @@ import (
 func TestCopyAndPaste(t *testing.T) {
 	expected := "日本語"
 
-	err := WriteAll(expected)
+	err := WriteAllString(expected)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	actual, err := ReadAll()
+	actual, err := ReadAllString()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,12 +32,12 @@ func TestMultiCopyAndPaste(t *testing.T) {
 	expected1 := "French: éèêëàùœç"
 	expected2 := "Weird UTF-8: 💩☃"
 
-	err := WriteAll(expected1)
+	err := WriteAllString(expected1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	actual1, err := ReadAll()
+	actual1, err := ReadAllString()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,12 +45,12 @@ func TestMultiCopyAndPaste(t *testing.T) {
 		t.Errorf("want %s, got %s", expected1, actual1)
 	}
 
-	err = WriteAll(expected2)
+	err = WriteAllString(expected2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	actual2, err := ReadAll()
+	actual2, err := ReadAllString()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,6 +68,6 @@ func BenchmarkReadAll(b *testing.B) {
 func BenchmarkWriteAll(b *testing.B) {
 	text := "いろはにほへと"
 	for b.Loop() {
-		WriteAll(text) //nolint:errcheck
+		WriteAllString(text) //nolint:errcheck
 	}
 }

@@ -12,29 +12,29 @@ import (
 	"os"
 )
 
-func readAll() (string, error) {
+func readAll() ([]byte, error) {
 	f, err := os.Open("/dev/snarf")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
 
 	str, err := io.ReadAll(f)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(str), nil
+	return str, nil
 }
 
-func writeAll(text string, _ bool) error {
+func writeAll(text []byte, _ bool) error {
 	f, err := os.OpenFile("/dev/snarf", os.O_WRONLY, 0o666)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	_, err = f.Write([]byte(text))
+	_, err = f.Write(text)
 	if err != nil {
 		return err
 	}

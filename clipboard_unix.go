@@ -26,7 +26,7 @@ const (
 
 var (
 	Primary bool
-	trimDos bool
+	trimDOS bool
 
 	pasteCmdArgs   []string
 	copyCmdArgs    []string
@@ -88,7 +88,7 @@ func init() {
 
 	pasteCmdArgs = powershellExePasteArgs
 	copyCmdArgs = clipExeCopyArgs
-	trimDos = true
+	trimDOS = true
 
 	if _, err := exec.LookPath(clipExe); err == nil {
 		if _, err := exec.LookPath(powershellExe); err == nil {
@@ -123,23 +123,23 @@ func getCopySecretCommand() *exec.Cmd {
 	return exec.Command(copySecretArgs[0], copySecretArgs[1:]...)
 }
 
-func readAll() (string, error) {
+func readAll() ([]byte, error) {
 	if Unsupported {
-		return "", missingCommands
+		return nil, missingCommands
 	}
 	pasteCmd := getPasteCommand()
 	out, err := pasteCmd.Output()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	result := string(out)
-	if trimDos && len(result) > 1 {
+	result := out
+	if trimDOS && len(result) > 1 {
 		result = result[:len(result)-2]
 	}
 	return result, nil
 }
 
-func writeAll(text string, secret bool) error {
+func writeAll(text []byte, secret bool) error {
 	if Unsupported {
 		return missingCommands
 	}
@@ -157,7 +157,7 @@ func writeAll(text string, secret bool) error {
 	if err := copyCmd.Start(); err != nil {
 		return err
 	}
-	if _, err := in.Write([]byte(text)); err != nil {
+	if _, err := in.Write(text); err != nil {
 		return err
 	}
 	if err := in.Close(); err != nil {

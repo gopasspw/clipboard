@@ -18,19 +18,19 @@ func main() {
 		panic(err)
 	}
 
-	if err := clipboard.WriteAll(string(out)); err != nil {
+	if err := clipboard.WriteAll(out); err != nil {
 		panic(err)
 	}
 
 	if timeout != nil && *timeout > 0 {
 		<-time.After(*timeout)
 		var text string
-		text, err = clipboard.ReadAll()
+		text, err = clipboard.ReadAllString()
 		if err != nil {
 			os.Exit(1)
 		}
 		if text == string(out) {
-			err = clipboard.WriteAll("")
+			err = clipboard.WriteAllString("")
 		}
 	}
 	if err != nil {

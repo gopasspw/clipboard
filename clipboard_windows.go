@@ -52,29 +52,29 @@ func waitOpenClipboard() error {
 	return err
 }
 
-func readAll() (string, error) {
+func readAll() ([]byte, error) {
 	// LockOSThread ensure that the whole method will keep executing on the same thread from begin to end (it actually locks the goroutine thread attribution).
 	// Otherwise if the goroutine switch thread during execution (which is a common practice), the OpenClipboard and CloseClipboard will happen on two different threads, and it will result in a clipboard deadlock.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if formatAvailable, _, err := isClipboardFormatAvailable.Call(cfUnicodetext); formatAvailable == 0 {
-		return "", err
+		return nil, err
 	}
 	err := waitOpenClipboard()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	h, _, err := getClipboardData.Call(cfUnicodetext)
 	if h == 0 {
 		_, _, _ = closeClipboard.Call()
-		return "", err
+		return nil, err
 	}
 
 	l, _, err := globalLock.Call(h)
 	if l == 0 {
 		_, _, _ = closeClipboard.Call()
-		return "", err
+		return nil, err
 	}
 
 	text := syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(l))[:]) //nolint:unsafeptr
@@ -82,17 +82,17 @@ func readAll() (string, error) {
 	r, _, err := globalUnlock.Call(h)
 	if r == 0 {
 		_, _, _ = closeClipboard.Call()
-		return "", err
+		return nil, err
 	}
 
 	closed, _, err := closeClipboard.Call()
 	if closed == 0 {
-		return "", err
+		return nil, err
 	}
-	return text, nil
+	return []byte(text), nil
 }
 
-func writeAll(text string, _ bool) error {
+func writeAll(text []byte, _ bool) error {
 	// LockOSThread ensure that the whole method will keep executing on the same thread from begin to end (it actually locks the goroutine thread attribution).
 	// Otherwise if the goroutine switch thread during execution (which is a common practice), the OpenClipboard and CloseClipboard will happen on two different threads, and it will result in a clipboard deadlock.
 	runtime.LockOSThread()
@@ -109,7 +109,7 @@ func writeAll(text string, _ bool) error {
 		return err
 	}
 
-	data := syscall.StringToUTF16(text)
+	data := syscall.StringToUTF16(string(text))
 
 	// "If the hMem parameter identifies a memory object, the object must have
 	// been allocated using the function with the GMEM_MOVEABLE flag."
