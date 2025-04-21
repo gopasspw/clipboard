@@ -72,7 +72,7 @@ func newWrapper() *wrapper {
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
 		w.pasteCmdArgs = wlpasteArgs
 		w.copyCmdArgs = wlcopyArgs
-		w.copySecretArgs = append(wlcopyArgs, "-o", "--type", "x-kde-passwordManagerHint/secret")
+		w.copySecretArgs = append(wlcopyArgs, "--type", "x-kde-passwordManagerHint/secret")
 
 		if _, err := exec.LookPath(wlcopy); err == nil {
 			if _, err := exec.LookPath(wlpaste); err == nil {
@@ -171,9 +171,8 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 	if secret {
 		copyCmd = exec.CommandContext(ctx, w.copySecretArgs[0], w.copySecretArgs[1:]...)
 	}
-	// capture errors
-	eOut := &bytes.Buffer{}
-	copyCmd.Stderr = eOut
+
+	// Note: Can not capture stderr from the copyCmd or it will hang.
 
 	in, err := copyCmd.StdinPipe()
 	if err != nil {
@@ -189,7 +188,7 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 		return fmt.Errorf("failed to close stdin: %w", err)
 	}
 	if err := copyCmd.Wait(); err != nil {
-		return fmt.Errorf("failed to wait for command: %w. Output: %s", err, eOut.String())
+		return fmt.Errorf("failed to wait for command: %w", err)
 	}
 	return nil
 }

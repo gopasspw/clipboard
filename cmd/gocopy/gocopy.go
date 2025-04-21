@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -20,10 +21,12 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("Copying to clipboard...")
 	if err := clipboard.WriteAll(ctx, out); err != nil {
 		panic(err)
 	}
 
+	fmt.Println("Waiting for clipboard to be cleared...")
 	if timeout != nil && *timeout > 0 {
 		<-time.After(*timeout)
 		var text string
@@ -38,4 +41,5 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+	fmt.Println("Clipboard cleared.")
 }
