@@ -8,7 +8,7 @@ import (
 )
 
 func Example() {
-	clipboard.WriteAllString(context.TODO(), "日本語") //nolint:errcheck
+	clipboard.WriteAllString(context.TODO(), "日本語")    //nolint:errcheck
 	text, _ := clipboard.ReadAllString(context.TODO()) //nolint:errcheck
 	fmt.Println(text)
 

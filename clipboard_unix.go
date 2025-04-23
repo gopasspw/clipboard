@@ -158,6 +158,7 @@ func readAll(ctx context.Context) ([]byte, error) {
 	if w.trimDOS && len(result) > 1 {
 		result = result[:len(result)-2]
 	}
+
 	return result, nil
 }
 
@@ -190,6 +191,7 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 	if err := copyCmd.Wait(); err != nil {
 		return fmt.Errorf("failed to wait for command: %w", err)
 	}
+
 	return nil
 }
 
