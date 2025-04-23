@@ -5,18 +5,12 @@
 package clipboard_test
 
 import (
-	"os"
-	"runtime"
 	"testing"
 
 	. "github.com/gopasspw/clipboard"
 )
 
 func TestCopyAndPaste(t *testing.T) {
-	if runtime.GOOS == "linux" && os.Getenv("WAYLAND_DISPLAY") == "" && os.Getenv("DISPLAY") == "" {
-		t.Skip("Skipping test on Linux without Wayland or X11")
-	}
-
 	expected := "日本語"
 
 	err := WriteAllString(t.Context(), expected)
@@ -35,10 +29,6 @@ func TestCopyAndPaste(t *testing.T) {
 }
 
 func TestMultiCopyAndPaste(t *testing.T) {
-	if runtime.GOOS == "linux" && os.Getenv("WAYLAND_DISPLAY") == "" && os.Getenv("DISPLAY") == "" {
-		t.Skip("Skipping test on Linux without Wayland or X11")
-	}
-
 	expected1 := "French: éèêëàùœç"
 	expected2 := "Weird UTF-8: 💩☃"
 
