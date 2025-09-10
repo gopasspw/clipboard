@@ -70,12 +70,12 @@ func newWrapper() *wrapper {
 
 	// Wayland
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
-		w.pasteCmdArgs = wlpasteArgs
-		w.copyCmdArgs = wlcopyArgs
-		w.copySecretArgs = append(wlcopyArgs, "--type", "x-kde-passwordManagerHint/secret")
-
-		if _, err := exec.LookPath(wlcopy); err == nil {
+        if _, err := exec.LookPath(wlcopy); err == nil {
 			if _, err := exec.LookPath(wlpaste); err == nil {
+                w.pasteCmdArgs = wlpasteArgs
+                w.copyCmdArgs = wlcopyArgs
+                w.copySecretArgs = append(wlcopyArgs, "--type", "x-kde-passwordManagerHint/secret")
+
 				w.supported = true
 
 				return w
@@ -169,7 +169,7 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 	}
 
 	copyCmd := exec.CommandContext(ctx, w.copyCmdArgs[0], w.copyCmdArgs[1:]...)
-	if secret {
+	if secret && len(w.copySecretArgs) > 0 {
 		copyCmd = exec.CommandContext(ctx, w.copySecretArgs[0], w.copySecretArgs[1:]...)
 	}
 
