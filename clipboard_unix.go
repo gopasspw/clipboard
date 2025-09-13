@@ -65,26 +65,25 @@ func (w *wrapper) unsupported() bool {
 	return !w.supported
 }
 
+func hasBinary(name string) bool {
+	_, err := exec.LookPath(name)
+
+	return err == nil
+}
+
 func newWrapper() *wrapper {
 	w := &wrapper{}
 
 	// Wayland
-	if os.Getenv("WAYLAND_DISPLAY") != "" {
+	if os.Getenv("WAYLAND_DISPLAY") != "" && hasBinary(wlcopy) && hasBinary(wlpaste) {
 		w.pasteCmdArgs = wlpasteArgs
 		w.copyCmdArgs = wlcopyArgs
 		w.copySecretArgs = append(wlcopyArgs, "--type", "x-kde-passwordManagerHint/secret")
-
-		if _, err := exec.LookPath(wlcopy); err == nil {
-			if _, err := exec.LookPath(wlpaste); err == nil {
-				w.supported = true
-
-				return w
-			}
-		}
+		w.supported = true
 	}
 
-	// X11 with xclip
-	if _, err := exec.LookPath(xclip); err == nil {
+	// X11 (or Wayland) with xclip
+	if hasBinary(xclip) {
 		w.pasteCmdArgs = xclipPasteArgs
 		w.copyCmdArgs = xclipCopyArgs
 		w.supported = true
@@ -92,8 +91,8 @@ func newWrapper() *wrapper {
 		return w
 	}
 
-	// X11 with xsel
-	if _, err := exec.LookPath(xsel); err == nil {
+	// X11 (or Wayland) with xsel
+	if hasBinary(xsel) {
 		w.pasteCmdArgs = xselPasteArgs
 		w.copyCmdArgs = xselCopyArgs
 		w.supported = true
@@ -102,26 +101,22 @@ func newWrapper() *wrapper {
 	}
 
 	// Termux
-	if _, err := exec.LookPath(termuxClipboardSet); err == nil {
-		if _, err := exec.LookPath(termuxClipboardGet); err == nil {
-			w.pasteCmdArgs = termuxPasteArgs
-			w.copyCmdArgs = termuxCopyArgs
-			w.supported = true
+	if hasBinary(termuxClipboardSet) && hasBinary(termuxClipboardGet) {
+		w.pasteCmdArgs = termuxPasteArgs
+		w.copyCmdArgs = termuxCopyArgs
+		w.supported = true
 
-			return w
-		}
+		return w
 	}
 
 	// Powershell
-	if _, err := exec.LookPath(clipExe); err == nil {
-		if _, err := exec.LookPath(powershellExe); err == nil {
-			w.pasteCmdArgs = powershellExePasteArgs
-			w.copyCmdArgs = clipExeCopyArgs
-			w.trimDOS = true
-			w.supported = true
+	if hasBinary(clipExe) && hasBinary(powershellExe) {
+		w.pasteCmdArgs = powershellExePasteArgs
+		w.copyCmdArgs = clipExeCopyArgs
+		w.trimDOS = true
+		w.supported = true
 
-			return w
-		}
+		return w
 	}
 
 	// Unsupported
@@ -169,7 +164,7 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 	}
 
 	copyCmd := exec.CommandContext(ctx, w.copyCmdArgs[0], w.copyCmdArgs[1:]...)
-	if secret {
+	if secret && len(w.copySecretArgs) > 0 {
 		copyCmd = exec.CommandContext(ctx, w.copySecretArgs[0], w.copySecretArgs[1:]...)
 	}
 
