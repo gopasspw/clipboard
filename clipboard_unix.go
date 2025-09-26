@@ -74,52 +74,39 @@ func hasBinary(name string) bool {
 func newWrapper() *wrapper {
 	w := &wrapper{}
 
-	// Wayland
-	if os.Getenv("WAYLAND_DISPLAY") != "" && hasBinary(wlcopy) && hasBinary(wlpaste) {
+	switch {
+	case os.Getenv("WAYLAND_DISPLAY") != "" && hasBinary(wlcopy) && hasBinary(wlpaste):
+		// Wayland
 		w.pasteCmdArgs = wlpasteArgs
 		w.copyCmdArgs = wlcopyArgs
 		w.copySecretArgs = append(wlcopyArgs, "--type", "x-kde-passwordManagerHint/secret")
 		w.supported = true
-	}
-
-	// X11 (or Wayland) with xclip
-	if hasBinary(xclip) {
+	case hasBinary(xclip):
+		// X11 (or Wayland) with xclip
 		w.pasteCmdArgs = xclipPasteArgs
 		w.copyCmdArgs = xclipCopyArgs
 		w.supported = true
-
-		return w
-	}
-
-	// X11 (or Wayland) with xsel
-	if hasBinary(xsel) {
+	case hasBinary(xsel):
+		// X11 (or Wayland) with xsel
 		w.pasteCmdArgs = xselPasteArgs
 		w.copyCmdArgs = xselCopyArgs
 		w.supported = true
-
-		return w
-	}
-
-	// Termux
-	if hasBinary(termuxClipboardSet) && hasBinary(termuxClipboardGet) {
+	case hasBinary(termuxClipboardSet) && hasBinary(termuxClipboardGet):
+		// Termux
 		w.pasteCmdArgs = termuxPasteArgs
 		w.copyCmdArgs = termuxCopyArgs
 		w.supported = true
-
-		return w
-	}
-
-	// Powershell
-	if hasBinary(clipExe) && hasBinary(powershellExe) {
+	case hasBinary(clipExe) && hasBinary(powershellExe):
+		// Powershell
 		w.pasteCmdArgs = powershellExePasteArgs
 		w.copyCmdArgs = clipExeCopyArgs
 		w.trimDOS = true
 		w.supported = true
-
-		return w
+	default:
+		// Unsupported
+		w.supported = false
 	}
 
-	// Unsupported
 	return w
 }
 
