@@ -9,15 +9,16 @@ package clipboard
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
+	"strings"
 )
 
 var (
-	pasteCmdArgs = "pbpaste"
-	copyCmdArgs  = "pbcopy"
+	pasteCmdArgs  = "pbpaste"
+	copyCmdArgs   = "pbcopy"
+	osascriptPath = "osascript"
 )
 
 func readAll(ctx context.Context) ([]byte, error) {
@@ -60,50 +61,36 @@ func writeAll(ctx context.Context, text []byte, secret bool) error {
 }
 
 func copyViaOsascript(ctx context.Context, password string) error {
-	args := []string{
-		// The Foundation library has the Objective C symbols for pasteboard
-		"-e", `use framework "Foundation"`,
-		// Need to use scripting additions for access to "do shell script"
-		"-e", "use scripting additions",
-		// type = a reference to the ObjC constant NSPasteboardTypeString
-		// which is needed to indentify clioboard contents as text
-		"-e", "set type to current application's NSPasteboardTypeString",
-		// pb = a reference to the system's pasteboard
-		"-e", "set pb to current application's NSPasteboard's generalPasteboard()",
-		// Must clear contents before adding a new item to pasteboard
-		"-e", "pb's clearContents()",
-		// Set the flag ConcealedType so clipboard history managers don't record the password.
-		// The first argument can by anything, but an empty string will do fine.
-		"-e", `pb's setString:"" forType:"org.nspasteboard.ConcealedType"`,
-		// AppleScript cannot read from stdin, so pipe fd#3 to stdin of cat and read the output.
-		// This output is put in the clipboard, setting type = string type
-		"-e", `pb's setString:(do shell script "cat 0<&3") forType:type`,
-	}
-	cmd := exec.CommandContext(ctx, "osascript", args...)
-	r, w, err := os.Pipe()
-	if err != nil {
-		return err
-	}
+	// Base64-encode the password so it can be safely embedded in the AppleScript
+	// source without any special escaping — the base64 alphabet [A-Za-z0-9+/=]
+	// contains no characters that are special inside AppleScript string literals.
+	b64 := base64.StdEncoding.EncodeToString([]byte(password))
 
-	// This connects the pipe to stdin of the osascript command, see the "do shell script"
-	// part around line 46. The pipe is created and written to before the osascript command
-	// is run so we shouldn't need to worry about partial writes (I hope!).
-	//
-	// TODO: We might be able to use `cmd.Stdin = strings.NewReader(password)` instead
-	cmd.ExtraFiles = []*os.File{r} // Receiving end of pipes is connected to fd#3
-	go func() {
-		defer w.Close()                    //nolint:errcheck
-		_, _ = io.WriteString(w, password) // Write the password to fd#3
-	}()
+	// The entire script is piped to "osascript -" via stdin, which avoids the
+	// fd#3 inheritance issue introduced in macOS 15 (Sequoia) where subprocesses
+	// spawned by "do shell script" no longer reliably inherit extra file
+	// descriptors from the osascript process.
+	script := fmt.Sprintf(`use framework "Foundation"
+use scripting additions
+set pw to do shell script "printf '%%s' '%s' | base64 -D"
+set type to current application's NSPasteboardTypeString
+set pb to current application's NSPasteboard's generalPasteboard()
+pb's clearContents()
+pb's setString:"" forType:"org.nspasteboard.ConcealedType"
+pb's setString:pw forType:type
+`, b64)
+
+	cmd := exec.CommandContext(ctx, osascriptPath, "-")
+	cmd.Stdin = strings.NewReader(script)
 
 	out, err := cmd.Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("osascript: %w", err)
 	}
 
-	// osascript should print true (return value of the last setString call) on success
+	// osascript prints the return value of the last expression; setString:forType:
+	// returns a BOOL which AppleScript renders as "true" on success.
 	if string(out) != "true\n" {
-		// Fallback to using attoto's pbcopy
 		return fmt.Errorf("osascript failed to set password: %s", string(out))
 	}
 
