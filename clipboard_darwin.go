@@ -70,9 +70,11 @@ func copyViaOsascript(ctx context.Context, password string) error {
 	// fd#3 inheritance issue introduced in macOS 15 (Sequoia) where subprocesses
 	// spawned by "do shell script" no longer reliably inherit extra file
 	// descriptors from the osascript process.
+	// Use the system base64 for macOS's -D flag; a version installed earlier
+	// on PATH may print usage instead of decoding the password.
 	script := fmt.Sprintf(`use framework "Foundation"
 use scripting additions
-set pw to do shell script "printf '%%s' '%s' | base64 -D"
+set pw to do shell script "printf '%%s' '%s' | /usr/bin/base64 -D"
 set type to current application's NSPasteboardTypeString
 set pb to current application's NSPasteboard's generalPasteboard()
 pb's clearContents()

@@ -8,8 +8,54 @@
 package clipboard
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
 	"testing"
 )
+
+// TestCopyViaOsascriptSystemBase64 replays the generated decoder with an
+// incompatible base64 executable on PATH, without accessing the clipboard.
+func TestCopyViaOsascriptSystemBase64(t *testing.T) {
+	dir := t.TempDir()
+	scriptFile := filepath.Join(dir, "captured.applescript")
+	stub := filepath.Join(dir, "osascript")
+	if err := os.WriteFile(stub, []byte("#!/bin/sh\n/bin/cat > \"$CLIPBOARD_TEST_SCRIPT\"\nprintf 'true\\n'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "base64"), []byte("#!/bin/sh\nprintf 'incompatible base64 usage\\n'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CLIPBOARD_TEST_SCRIPT", scriptFile)
+	t.Setenv("PATH", dir)
+	orig := osascriptPath
+	osascriptPath = stub
+	t.Cleanup(func() { osascriptPath = orig })
+	decoder := regexp.MustCompile(`(?m)^set pw to do shell script "(.+)"$`)
+
+	for _, want := range []string{"s3cr3t-pass", `p@$$w0rd "quoted" & <tags>`, "日本語 éèê 💩☃"} {
+		if err := copyViaOsascript(t.Context(), want); err != nil {
+			t.Fatal(err)
+		}
+		script, err := os.ReadFile(scriptFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		match := decoder.FindSubmatch(script)
+		if len(match) != 2 {
+			t.Fatalf("decoder command not found in generated AppleScript")
+		}
+		cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c", string(match[1]))
+		got, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("decoder command failed: %v", err)
+		}
+		if string(got) != want {
+			t.Errorf("decoded password = %q, want %q", got, want)
+		}
+	}
+}
 
 // TestCopyViaOsascriptSuccess verifies that copyViaOsascript writes the
 // expected value to the system clipboard and returns no error.
